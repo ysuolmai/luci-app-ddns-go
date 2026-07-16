@@ -92,13 +92,16 @@ jobs:
           cp -a "$GITHUB_WORKSPACE/luci-app-ddns-go" package/ddns-go-suite/luci-app-ddns-go
           cat > .config <<'EOF'
           ${{ matrix.target_config }}
+          CONFIG_USE_APK=n
           CONFIG_PACKAGE_ddns-go=m
           CONFIG_PACKAGE_luci-app-ddns-go=m
+          CONFIG_PACKAGE_luci-i18n-ddns-go-zh-cn=m
           EOF
           make defconfig
           grep -E '^CONFIG_PACKAGE_(luci-app-)?ddns-go=[my]$' .config
           grep -Eq '^CONFIG_PACKAGE_ddns-go=[my]$' .config
           grep -Eq '^CONFIG_PACKAGE_luci-app-ddns-go=[my]$' .config
+          grep -Eq '^CONFIG_PACKAGE_luci-i18n-ddns-go-zh-cn=[my]$' .config
       - name: Download sources
         working-directory: openwrt
         run: make download -j8
@@ -127,8 +130,9 @@ jobs:
           make package/ddns-go-suite/luci-app-ddns-go/compile -j"$(nproc)" V=s
       - name: Verify package versions
         run: |
-          find "openwrt/bin/packages/${{ matrix.package_arch }}" -type f -name 'ddns-go-6.17.1.1-r1.apk' | grep -q .
-          find openwrt/bin/packages -type f -name 'luci-app-ddns-go-*.apk' | grep -q .
+          find "openwrt/bin/packages/${{ matrix.package_arch }}" -type f -name 'ddns-go_6.17.1.1-r1_*.ipk' | grep -q .
+          find openwrt/bin/packages -type f -name 'luci-app-ddns-go_*.ipk' | grep -q .
+          find openwrt/bin/packages -type f -name 'luci-i18n-ddns-go-zh-cn_*.ipk' | grep -q .
       - name: Upload packages
         uses: actions/upload-artifact@v4
         with:
