@@ -13,7 +13,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Static checks
         run: |
           node --check luci-app-ddns-go/htdocs/luci-static/resources/view/ddns-go/overview.js
@@ -26,7 +26,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install build dependencies
         run: |
           sudo apt-get update
@@ -49,8 +49,22 @@ jobs:
       - name: Download sources
         working-directory: openwrt
         run: make download -j8
+      - name: Build host tools
+        working-directory: openwrt
+        run: make tools/install -j"$(nproc)"
+      - name: Build toolchain
+        working-directory: openwrt
+        run: make toolchain/install -j"$(nproc)"
       - name: Compile packages
         working-directory: openwrt
         run: |
           make package/ddns-go/compile -j"$(nproc)" V=s
           make package/luci-app-ddns-go/compile -j"$(nproc)" V=s
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: ddns-go-openwrt-packages
+          path: |
+            openwrt/bin/packages/**/*ddns-go*.apk
+            openwrt/bin/packages/**/*ddns-go*.ipk
+          if-no-files-found: error

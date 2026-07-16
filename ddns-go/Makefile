@@ -1,12 +1,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=ddns-go
-PKG_VERSION:=6.17.1
+PKG_VERSION:=6.17.1-openwrt.1
 PKG_RELEASE:=1
 
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=https://github.com/ysuolmai/ddns-go.git
-PKG_SOURCE_VERSION:=743e1b9f6bd9c4c2f10bae4731cc69a672b2f74e
+PKG_SOURCE_VERSION:=40cda8eac5856275bbf68c3373a5d95589b143f1
 PKG_MIRROR_HASH:=skip
 
 PKG_LICENSE:=MIT
@@ -17,7 +17,7 @@ PKG_BUILD_PARALLEL:=1
 PKG_BUILD_FLAGS:=no-mips16
 
 GO_PKG:=github.com/jeessy2/ddns-go/v6
-GO_PKG_LDFLAGS_X:=main.version=$(PKG_VERSION)-openwrt
+GO_PKG_LDFLAGS_X:=main.version=$(PKG_VERSION)
 
 include $(INCLUDE_DIR)/package.mk
 include $(TOPDIR)/feeds/packages/lang/golang/golang-package.mk
