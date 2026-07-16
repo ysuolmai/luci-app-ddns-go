@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=ddns-go
-PKG_VERSION:=6.17.1-openwrt.1
+PKG_VERSION:=6.17.1.1
 PKG_RELEASE:=1
 
 PKG_SOURCE_PROTO:=git
@@ -17,7 +17,7 @@ PKG_BUILD_PARALLEL:=1
 PKG_BUILD_FLAGS:=no-mips16
 
 GO_PKG:=github.com/jeessy2/ddns-go/v6
-GO_PKG_LDFLAGS_X:=main.version=$(PKG_VERSION)
+GO_PKG_LDFLAGS_X:=main.version=6.17.1-openwrt.1
 
 include $(INCLUDE_DIR)/package.mk
 include $(TOPDIR)/feeds/packages/lang/golang/golang-package.mk
