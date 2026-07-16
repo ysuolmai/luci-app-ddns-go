@@ -93,6 +93,7 @@ jobs:
           cat > .config <<'EOF'
           ${{ matrix.target_config }}
           CONFIG_USE_APK=n
+          CONFIG_LUCI_LANG_zh_Hans=y
           CONFIG_PACKAGE_ddns-go=m
           CONFIG_PACKAGE_luci-app-ddns-go=m
           CONFIG_PACKAGE_luci-i18n-ddns-go-zh-cn=m
