@@ -72,8 +72,9 @@ jobs:
             \( -type d -o -type l \) \
             \( -name ddns-go -o -name luci-app-ddns-go \) \
             -prune -exec rm -rf {} +
-          ln -s "$GITHUB_WORKSPACE/ddns-go" package/ddns-go
-          ln -s "$GITHUB_WORKSPACE/luci-app-ddns-go" package/luci-app-ddns-go
+          mkdir -p package/ddns-go-suite
+          cp -a "$GITHUB_WORKSPACE/ddns-go" package/ddns-go-suite/ddns-go
+          cp -a "$GITHUB_WORKSPACE/luci-app-ddns-go" package/ddns-go-suite/luci-app-ddns-go
           cat > .config <<'EOF'
           CONFIG_TARGET_x86=y
           CONFIG_TARGET_x86_64=y
@@ -103,8 +104,8 @@ jobs:
       - name: Compile packages
         working-directory: openwrt
         run: |
-          make package/ddns-go/compile -j"$(nproc)" V=s
-          make package/luci-app-ddns-go/compile -j"$(nproc)" V=s
+          make package/ddns-go-suite/ddns-go/compile -j"$(nproc)" V=s
+          make package/ddns-go-suite/luci-app-ddns-go/compile -j"$(nproc)" V=s
       - name: Verify package versions
         run: |
           find openwrt/bin/packages -type f -name 'ddns-go-6.17.1.1-r1.apk' | grep -q .
