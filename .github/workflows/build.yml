@@ -1,0 +1,56 @@
+name: Build OpenWrt packages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Static checks
+        run: |
+          node --check luci-app-ddns-go/htdocs/luci-static/resources/view/ddns-go/overview.js
+          node --check luci-app-ddns-go/htdocs/luci-static/resources/view/ddns-go/log.js
+          sh -n ddns-go/files/ddns-go.init
+          sh -n luci-app-ddns-go/root/etc/uci-defaults/99-luci-ddns-go
+          jq empty luci-app-ddns-go/root/usr/share/luci/menu.d/luci-app-ddns-go.json
+          jq empty luci-app-ddns-go/root/usr/share/rpcd/acl.d/luci-app-ddns-go.json
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential clang flex bison g++ gawk gcc-multilib gettext git libncurses-dev libssl-dev python3-setuptools rsync swig unzip zlib1g-dev file wget
+      - name: Prepare OpenWrt tree
+        run: |
+          git clone --depth=1 --single-branch --branch owrt https://github.com/VIKINGYFY/immortalwrt.git openwrt
+          cd openwrt
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+          ln -s "$GITHUB_WORKSPACE/ddns-go" package/ddns-go
+          ln -s "$GITHUB_WORKSPACE/luci-app-ddns-go" package/luci-app-ddns-go
+          cat > .config <<'EOF'
+          CONFIG_TARGET_x86=y
+          CONFIG_TARGET_x86_64=y
+          CONFIG_PACKAGE_ddns-go=m
+          CONFIG_PACKAGE_luci-app-ddns-go=m
+          EOF
+          make defconfig
+      - name: Download sources
+        working-directory: openwrt
+        run: make download -j8
+      - name: Compile packages
+        working-directory: openwrt
+        run: |
+          make package/ddns-go/compile -j"$(nproc)" V=s
+          make package/luci-app-ddns-go/compile -j"$(nproc)" V=s

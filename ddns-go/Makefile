@@ -1,58 +1,58 @@
-# SPDX-License-Identifier: GPL-3.0-only
-#
-# Copyright (C) 2021-2025 sirpdboy  <herboy2008@gmail.com>
-# 
-# This is free software, licensed under the Apache License, Version 2.0 .
-#
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=ddns-go
-PKG_VERSION:=6.12.5
-PKG_RELEASE:=11
+PKG_VERSION:=6.17.1
+PKG_RELEASE:=1
 
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=https://codeload.github.com/jeessy2/ddns-go/tar.gz/v$(PKG_VERSION)?
-PKG_HASH:=skip
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_URL:=https://github.com/ysuolmai/ddns-go.git
+PKG_SOURCE_VERSION:=743e1b9f6bd9c4c2f10bae4731cc69a672b2f74e
+PKG_MIRROR_HASH:=skip
 
-
-PKG_LICENSE:=AGPL-3.0-only
+PKG_LICENSE:=MIT
 PKG_LICENSE_FILES:=LICENSE
-PKG_MAINTAINER:=herboy2008 <herboy2008@gmail.com>
-
+PKG_MAINTAINER:=ysuolmai
 PKG_BUILD_DEPENDS:=golang/host
 PKG_BUILD_PARALLEL:=1
 PKG_BUILD_FLAGS:=no-mips16
 
 GO_PKG:=github.com/jeessy2/ddns-go/v6
-GO_PKG_LDFLAGS_X:=main.version=$(PKG_VERSION)
+GO_PKG_LDFLAGS_X:=main.version=$(PKG_VERSION)-openwrt
 
 include $(INCLUDE_DIR)/package.mk
 include $(TOPDIR)/feeds/packages/lang/golang/golang-package.mk
 
 define Package/ddns-go
-  TITLE:=A Linux web GUI client of ddns-go
   SECTION:=net
   CATEGORY:=Network
-  SUBMENU:=Web Servers/Proxies
+  SUBMENU:=IP Addresses and Names
+  TITLE:=DDNS-GO engine for native LuCI management
+  URL:=https://github.com/ysuolmai/ddns-go
   DEPENDS:=$(GO_ARCH_DEPENDS) +ca-bundle
-  URL:=https://github.com/jeessy2/ddns-go
   USERID:=ddns-go:ddns-go
 endef
 
 define Package/ddns-go/description
-  ddns-go is a automatically obtain your public IPv4 or IPv6 address and resolve it to the corresponding domain name service,
-  support Alidns Dnspod Cloudflare Hicloud Callback Baiducloud porkbun GoDaddy Google Domains.
+  DDNS-GO provider engine with a local-only OpenWrt management API.
+endef
+
+define Package/ddns-go/conffiles
+/etc/config/ddns-go
+/etc/ddns-go/ddns-go-config.yaml
 endef
 
 define Package/ddns-go/install
 	$(call GoPackage/Package/Install/Bin,$(1))
+	$(INSTALL_DIR) $(1)/etc/init.d $(1)/etc/config $(1)/etc/ddns-go
+	$(INSTALL_BIN) ./files/ddns-go.init $(1)/etc/init.d/ddns-go
+	$(INSTALL_CONF) ./files/ddns-go.config $(1)/etc/config/ddns-go
+	$(INSTALL_CONF) ./files/ddns-go-config.yaml $(1)/etc/ddns-go/ddns-go-config.yaml
+endef
 
-	$(INSTALL_DIR) $(1)/etc/init.d
-	$(INSTALL_BIN) $(CURDIR)/file/ddns-go.init $(1)/etc/init.d/ddns-go
-	$(INSTALL_DIR) $(1)/usr/libexec
-	$(INSTALL_BIN) $(CURDIR)/file/ddns-go-call.libexec $(1)/usr/libexec/ddns-go-call
-	$(INSTALL_DIR) $(1)/etc/uci-defaults
-	$(INSTALL_BIN) $(CURDIR)/file/luci-ddns-go.uci-default $(1)/etc/uci-defaults/luci-ddns-go
+define Package/ddns-go/postinst
+#!/bin/sh
+[ -n "$${IPKG_INSTROOT}" ] || /etc/init.d/ddns-go enable
+exit 0
 endef
 
 $(eval $(call GoBinPackage,ddns-go))

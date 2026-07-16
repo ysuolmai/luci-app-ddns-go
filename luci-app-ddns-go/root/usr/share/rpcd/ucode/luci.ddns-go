@@ -1,0 +1,78 @@
+#!/usr/bin/ucode
+
+'use strict';
+
+import { popen } from 'fs';
+
+const BIN = '/usr/bin/ddns-go';
+const SOCKET = '/var/run/ddns-go/admin.sock';
+const BASE = `${BIN} -openwrt-socket ${SOCKET} -openwrt-call`;
+
+function call_read(operation) {
+	let pipe = popen(`${BASE} ${operation} 2>/dev/null`);
+	if (!pipe)
+		return null;
+
+	let output = pipe.read('all');
+	let status = pipe.close();
+	if (status || !output)
+		return null;
+
+	try {
+		return json(output);
+	} catch (e) {
+		return null;
+	}
+}
+
+const methods = {
+	status: {
+		call: function() {
+			let result = call_read('status');
+			if (!result)
+				return { running: false, updating: false };
+			result.running = true;
+			return result;
+		}
+	},
+
+	get_config: {
+		call: function() {
+			return { config: call_read('config') ?? {} };
+		}
+	},
+
+	set_config: {
+		args: { config: {} },
+		call: function(request) {
+			let pipe = popen(`${BASE} set-config >/dev/null 2>&1`, 'w');
+			if (!pipe)
+				return { saved: false, error: 'unable to start ddns-go controller' };
+			pipe.write(sprintf('%J', request.args.config ?? {}));
+			let status = pipe.close();
+			return status ? { saved: false, error: 'configuration was rejected' } : { saved: true };
+		}
+	},
+
+	run: {
+		call: function() {
+			return call_read('run') ?? { started: false, error: 'service is not running' };
+		}
+	},
+
+	logs: {
+		args: { limit: 200 },
+		call: function(request) {
+			let limit = +request.args.limit || 200;
+			limit = min(max(limit, 20), 1000);
+			let pipe = popen(`logread -l ${limit} -e ddns-go 2>/dev/null`);
+			if (!pipe)
+				return { logs: '' };
+			let output = pipe.read('all') ?? '';
+			pipe.close();
+			return { logs: output };
+		}
+	}
+};
+
+return { 'luci.ddns-go': methods };
