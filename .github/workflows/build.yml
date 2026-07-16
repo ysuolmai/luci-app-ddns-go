@@ -24,7 +24,22 @@ jobs:
           jq empty luci-app-ddns-go/root/usr/share/rpcd/acl.d/luci-app-ddns-go.json
 
   build:
+    name: build (${{ matrix.target }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64
+            package_arch: x86_64
+            target_config: |
+              CONFIG_TARGET_x86=y
+              CONFIG_TARGET_x86_64=y
+          - target: qualcommax-ipq60xx
+            package_arch: aarch64_cortex-a53
+            target_config: |
+              CONFIG_TARGET_qualcommax=y
+              CONFIG_TARGET_qualcommax_ipq60xx=y
     steps:
       - uses: actions/checkout@v5
       - name: Install build dependencies
@@ -47,9 +62,9 @@ jobs:
         id: cache
         uses: actions/cache/restore@v4
         with:
-          key: openwrt-owrt-x86_64-${{ steps.source.outputs.fingerprint }}
+          key: openwrt-owrt-${{ matrix.target }}-${{ steps.source.outputs.fingerprint }}
           restore-keys: |
-            openwrt-owrt-x86_64-
+            openwrt-owrt-${{ matrix.target }}-
           path: |
             openwrt/.ccache
             openwrt/dl
@@ -76,8 +91,7 @@ jobs:
           cp -a "$GITHUB_WORKSPACE/ddns-go" package/ddns-go-suite/ddns-go
           cp -a "$GITHUB_WORKSPACE/luci-app-ddns-go" package/ddns-go-suite/luci-app-ddns-go
           cat > .config <<'EOF'
-          CONFIG_TARGET_x86=y
-          CONFIG_TARGET_x86_64=y
+          ${{ matrix.target_config }}
           CONFIG_PACKAGE_ddns-go=m
           CONFIG_PACKAGE_luci-app-ddns-go=m
           EOF
@@ -113,12 +127,12 @@ jobs:
           make package/ddns-go-suite/luci-app-ddns-go/compile -j"$(nproc)" V=s
       - name: Verify package versions
         run: |
-          find openwrt/bin/packages -type f -name 'ddns-go-6.17.1.1-r1.apk' | grep -q .
+          find "openwrt/bin/packages/${{ matrix.package_arch }}" -type f -name 'ddns-go-6.17.1.1-r1.apk' | grep -q .
           find openwrt/bin/packages -type f -name 'luci-app-ddns-go-*.apk' | grep -q .
       - name: Upload packages
         uses: actions/upload-artifact@v4
         with:
-          name: ddns-go-openwrt-packages
+          name: ddns-go-openwrt-packages-${{ matrix.target }}
           path: |
             openwrt/bin/packages/**/*ddns-go*.apk
             openwrt/bin/packages/**/*ddns-go*.ipk
