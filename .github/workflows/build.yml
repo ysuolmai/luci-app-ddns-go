@@ -82,13 +82,17 @@ jobs:
           CONFIG_PACKAGE_luci-app-ddns-go=m
           EOF
           make defconfig
+          grep -q '^CONFIG_PACKAGE_ddns-go=m$' .config
+          grep -q '^CONFIG_PACKAGE_luci-app-ddns-go=m$' .config
       - name: Download sources
         working-directory: openwrt
         run: make download -j8
       - name: Build host tools
+        if: steps.cache.outputs.cache-matched-key == ''
         working-directory: openwrt
         run: make tools/install -j"$(nproc)"
       - name: Build toolchain
+        if: steps.cache.outputs.cache-matched-key == ''
         working-directory: openwrt
         run: make toolchain/install -j"$(nproc)"
       - name: Save OpenWrt tools cache
