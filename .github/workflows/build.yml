@@ -82,8 +82,9 @@ jobs:
           CONFIG_PACKAGE_luci-app-ddns-go=m
           EOF
           make defconfig
-          grep -q '^CONFIG_PACKAGE_ddns-go=m$' .config
-          grep -q '^CONFIG_PACKAGE_luci-app-ddns-go=m$' .config
+          grep -E '^CONFIG_PACKAGE_(luci-app-)?ddns-go=[my]$' .config
+          grep -Eq '^CONFIG_PACKAGE_ddns-go=[my]$' .config
+          grep -Eq '^CONFIG_PACKAGE_luci-app-ddns-go=[my]$' .config
       - name: Download sources
         working-directory: openwrt
         run: make download -j8
