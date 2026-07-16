@@ -37,6 +37,10 @@ jobs:
           cd openwrt
           ./scripts/feeds update -a
           ./scripts/feeds install -a
+          find feeds/luci feeds/packages package/feeds -maxdepth 4 \
+            \( -type d -o -type l \) \
+            \( -name ddns-go -o -name luci-app-ddns-go \) \
+            -prune -exec rm -rf {} +
           ln -s "$GITHUB_WORKSPACE/ddns-go" package/ddns-go
           ln -s "$GITHUB_WORKSPACE/luci-app-ddns-go" package/luci-app-ddns-go
           cat > .config <<'EOF'
@@ -60,6 +64,10 @@ jobs:
         run: |
           make package/ddns-go/compile -j"$(nproc)" V=s
           make package/luci-app-ddns-go/compile -j"$(nproc)" V=s
+      - name: Verify package versions
+        run: |
+          find openwrt/bin/packages -type f -name 'ddns-go-6.17.1-openwrt.1-r1.apk' | grep -q .
+          find openwrt/bin/packages -type f -name 'luci-app-ddns-go-*.apk' | grep -q .
       - name: Upload packages
         uses: actions/upload-artifact@v4
         with:
