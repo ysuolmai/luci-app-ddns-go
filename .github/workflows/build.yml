@@ -132,8 +132,8 @@ jobs:
       - name: Verify package versions
         run: |
           find "openwrt/bin/packages/${{ matrix.package_arch }}" -type f -name 'ddns-go_6.17.1.1-r2_*.ipk' | grep -q .
-          find openwrt/bin/packages -type f -name 'luci-app-ddns-go_*.ipk' | grep -q .
-          find openwrt/bin/packages -type f -name 'luci-i18n-ddns-go-zh-cn_*.ipk' | grep -q .
+          find openwrt/bin/packages -type f -name 'luci-app-ddns-go_1.0.0-r2_all.ipk' | grep -q .
+          find openwrt/bin/packages -type f -name 'luci-i18n-ddns-go-zh-cn_1.0.0-r2_all.ipk' | grep -q .
       - name: Upload packages
         uses: actions/upload-artifact@v4
         with:
