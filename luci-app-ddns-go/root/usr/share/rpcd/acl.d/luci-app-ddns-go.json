@@ -11,7 +11,7 @@
 		"write": {
 			"uci": [ "ddns-go" ],
 			"ubus": {
-				"luci.ddns-go": [ "set_config", "run" ],
+				"luci.ddns-go": [ "set_config", "set_enabled", "run" ],
 				"uci": [ "apply" ]
 			}
 		}

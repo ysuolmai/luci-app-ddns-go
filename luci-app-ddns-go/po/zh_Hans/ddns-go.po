@@ -28,6 +28,21 @@ msgstr "服务"
 msgid "Enabled"
 msgstr "启用"
 
+msgid "Service enabled"
+msgstr "服务已启用"
+
+msgid "Service disabled"
+msgstr "服务已停用"
+
+msgid "Unable to change service state"
+msgstr "无法切换服务状态"
+
+msgid "Service settings"
+msgstr "服务设置"
+
+msgid "Save service settings"
+msgstr "保存服务设置"
+
 msgid "Update interval"
 msgstr "更新间隔"
 

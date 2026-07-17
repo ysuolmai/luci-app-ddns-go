@@ -10,6 +10,7 @@
 var callStatus = rpc.declare({ object: 'luci.ddns-go', method: 'status', expect: {} });
 var callGetConfig = rpc.declare({ object: 'luci.ddns-go', method: 'get_config', expect: { config: {} } });
 var callSetConfig = rpc.declare({ object: 'luci.ddns-go', method: 'set_config', params: [ 'config' ], expect: {} });
+var callSetEnabled = rpc.declare({ object: 'luci.ddns-go', method: 'set_enabled', params: [ 'enabled' ], expect: {} });
 var callRun = rpc.declare({ object: 'luci.ddns-go', method: 'run', expect: {} });
 
 var providers = [
@@ -100,6 +101,31 @@ return view.extend({
 		var text = status.running ? _('Running') : _('Stopped');
 		var state = E('span', { 'class': status.running ? 'ddns-state running' : 'ddns-state stopped' }, text);
 		var version = E('span', { 'class': 'ddns-version' }, status.version ? 'v' + status.version : '');
+		var toggle = E('input', {
+			type: 'checkbox',
+			'class': 'cbi-input-checkbox',
+			checked: self.serviceEnabled ? '' : null,
+			change: function() {
+				var requested = toggle.checked;
+				toggle.disabled = true;
+				return callSetEnabled(requested).then(function(result) {
+					if (!result.saved)
+						throw new Error(result.error || _('Unable to change service state'));
+					self.serviceEnabled = result.enabled;
+					self.updateEditorState();
+					ui.addNotification(null, E('p', {}, result.enabled ? _('Service enabled') : _('Service disabled')));
+					if (result.enabled)
+						window.setTimeout(function() { location.reload(); }, 800);
+				}).catch(function(err) {
+					toggle.checked = self.serviceEnabled;
+					ui.addNotification(null, E('p', {}, err.message), 'error');
+				}).finally(function() {
+					toggle.disabled = false;
+					self.refreshStatus();
+				});
+			}
+		});
+		var serviceSwitch = E('label', { 'class': 'ddns-service-switch' }, [ toggle, E('span', {}, _('Enabled')) ]);
 		var run = E('button', {
 			'class': 'cbi-button cbi-button-action',
 			disabled: !status.running || status.updating ? '' : null,
@@ -115,8 +141,13 @@ return view.extend({
 				}).finally(function() { self.refreshStatus(); });
 			}
 		}, status.updating ? _('Updating...') : _('Update now'));
-		this.statusNode = E('div', { 'class': 'ddns-status' }, [ state, version, run ]);
+		this.statusNode = E('div', { 'class': 'ddns-status' }, [ serviceSwitch, state, version, run ]);
 		return this.statusNode;
+	},
+
+	updateEditorState: function() {
+		if (this.engineNode)
+			this.engineNode.hidden = !this.serviceEnabled;
 	},
 
 	refreshStatus: function() {
@@ -231,13 +262,12 @@ return view.extend({
 
 	render: function(data) {
 		var self = this;
+		self.serviceEnabled = uci.get('ddns-go', 'main', 'enabled') === '1';
 		self.config = normalizeConfig(data[1]);
 		var m = new form.Map('ddns-go', _('DDNS-GO'));
 		var s = m.section(form.NamedSection, 'main', 'service', _('Service'));
 		s.anonymous = true;
-		var o = s.option(form.Flag, 'enabled', _('Enabled'));
-		o.rmempty = false;
-		o = s.option(form.Value, 'interval', _('Update interval'));
+		var o = s.option(form.Value, 'interval', _('Update interval'));
 		o.datatype = 'range(30,86400)';
 		o.default = '300';
 		o = s.option(form.Value, 'cache_times', _('Cache comparisons'));
@@ -247,6 +277,16 @@ return view.extend({
 		o = s.option(form.Value, 'dns', _('DNS server'));
 		o.datatype = 'ipaddr';
 		o.rmempty = true;
+		o = s.option(form.Button, '_save', _('Service settings'));
+		o.inputstyle = 'apply';
+		o.inputtitle = _('Save service settings');
+		o.onclick = function() {
+			return this.map.save(null, true).then(function() {
+				return ui.changes.apply(true);
+			}).then(function() {
+				return callSetEnabled(self.serviceEnabled);
+			});
+		};
 
 		self.providersNode = E('div');
 		self.webhookURL = E('input', { 'class': 'cbi-input-text', value: self.config.WebhookURL });
@@ -256,10 +296,7 @@ return view.extend({
 
 		poll.add(function() { return self.refreshStatus(); }, 5);
 		return m.render().then(function(mapNode) {
-			var root = E('div', {}, [
-				E('style', {}, '.ddns-status{display:flex;align-items:center;gap:12px;margin:0 0 16px}.ddns-state{font-weight:600}.ddns-state.running{color:#16803a}.ddns-state.stopped{color:#b42318}.ddns-version{color:#667085}.ddns-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.ddns-ip-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;margin-top:18px}.ddns-field{display:flex;flex-direction:column;gap:5px;min-width:0}.ddns-field input,.ddns-field select,.ddns-field textarea{width:100%;box-sizing:border-box}.ddns-address h4{margin:0 0 10px}.ddns-address{display:grid;gap:10px}.ddns-webhook{display:grid;gap:12px}.ddns-actions{margin-top:14px;text-align:right}@media(max-width:700px){.ddns-grid,.ddns-ip-grid{grid-template-columns:1fr}.ddns-status{flex-wrap:wrap}.table{display:block;overflow-x:auto}}'),
-				self.renderStatus(data[2]),
-				mapNode,
+			self.engineNode = E('div', {}, [
 				E('div', { 'class': 'cbi-section' }, [
 					E('h3', {}, _('DNS providers')),
 					self.providersNode,
@@ -273,7 +310,14 @@ return view.extend({
 					E('div', { 'class': 'ddns-actions' }, save)
 				])
 			]);
+			var root = E('div', {}, [
+				E('style', {}, '.ddns-status{display:flex;align-items:center;gap:12px;margin:0 0 16px}.ddns-service-switch{display:inline-flex;align-items:center;gap:7px;font-weight:600}.ddns-service-switch input{margin:0}.ddns-state{font-weight:600}.ddns-state.running{color:#16803a}.ddns-state.stopped{color:#b42318}.ddns-version{color:#667085}.ddns-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.ddns-ip-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;margin-top:18px}.ddns-field{display:flex;flex-direction:column;gap:5px;min-width:0}.ddns-field input,.ddns-field select,.ddns-field textarea{width:100%;box-sizing:border-box}.ddns-address h4{margin:0 0 10px}.ddns-address{display:grid;gap:10px}.ddns-webhook{display:grid;gap:12px}.ddns-actions{margin-top:14px;text-align:right}@media(max-width:700px){.ddns-grid,.ddns-ip-grid{grid-template-columns:1fr}.ddns-status{flex-wrap:wrap}.table{display:block;overflow-x:auto}}'),
+				self.renderStatus(data[2]),
+				mapNode,
+				self.engineNode
+			]);
 			self.renderProviders();
+			self.updateEditorState();
 			return root;
 		});
 	}

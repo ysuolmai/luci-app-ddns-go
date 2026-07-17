@@ -13,7 +13,7 @@ start_service() {
 	local enabled interval cache_times skip_verify dns
 
 	config_load ddns-go
-	config_get_bool enabled main enabled 1
+	config_get_bool enabled main enabled 0
 	[ "$enabled" -eq 1 ] || return 0
 	config_get interval main interval 300
 	config_get cache_times main cache_times 5
